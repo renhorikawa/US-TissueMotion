@@ -12,15 +12,11 @@ def initialize_video_capture(video_path):
     return cap, cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
 
 def histogram_equalization(image):
-    # ヒストグラム平坦化
     return cv2.equalizeHist(image)
-
-def apply_average_filter(image, kernel_size=5):
-    # 平均値フィルタの適用
-    return cv2.blur(image, (kernel_size, kernel_size))
 
 def calculate_optical_flow(prvs, next, roi):
     x, y, w, h = roi
+
     roi_prvs = prvs[y:y+h, x:x+w]
     roi_next = next[y:y+h, x:x+w]
 
@@ -31,7 +27,6 @@ def calculate_optical_flow(prvs, next, roi):
     return flow, mag
 
 def calculate_median_movement(mag):
-    # 移動したピクセルのマグニチュードの中央値を計算
     valid_magnitudes = mag[mag > 1]  # 動きがあるピクセルのみ
     if valid_magnitudes.size > 0:
         return np.median(valid_magnitudes)
@@ -58,7 +53,7 @@ if not ret:
     exit()
 
 # cv2.selectROIで手動でROIを選択
-roi = cv2.selectROI("ROI選択", frame, fromCenter=False, showCrosshair=True)
+roi1 = cv2.selectROI("ROI選択", frame, fromCenter=False, showCrosshair=True)
 cv2.destroyWindow("ROI選択")
 
 total_median_movement = 0.0
@@ -71,26 +66,24 @@ while True:
 
     next = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    # 平均値フィルタを適用（ノイズ除去）
-    next = apply_average_filter(next, kernel_size=5)
-
     # ヒストグラム平坦化
-    next = histogram_equalization(next)
+    next = histogram_equalization(next) 
 
-    flow, mag_full = calculate_optical_flow(prvs, next, roi)
+    # 光学フローを計算（1つのROIのみ）
+    flow, mag = calculate_optical_flow(prvs, next, roi1)
 
     # 移動したピクセルの中央値を計算
-    median_movement = calculate_median_movement(mag_full)
+    median_movement = calculate_median_movement(mag)
 
     total_median_movement += median_movement
     frame_count += 1
 
     # 動きの矢印を描画
-    draw_arrows(frame2, flow, roi, mag_full, (0, 255, 0))
+    draw_arrows(frame2, flow, roi1, mag, (0, 255, 0))
 
     # ROI領域を描画
     frame2_with_roi = frame2.copy()
-    cv2.rectangle(frame2_with_roi, roi[:2], (roi[0]+roi[2], roi[1]+roi[3]), (255, 0, 0), 2)
+    cv2.rectangle(frame2_with_roi, roi1[:2], (roi1[0]+roi1[2], roi1[1]+roi1[3]), (255, 0, 0), 2)
 
     cv2.imshow('frame2', frame2_with_roi)
 
@@ -99,9 +92,8 @@ while True:
         break
     prvs = next
 
-# 動きの中央値を表示（平均ではなく、すべてのフレームの合計）
+# 動きの中央値の合計を表示
 print(f"ROIの動きの中央値の合計: {total_median_movement:.2f}")
 
 cap.release()
 cv2.destroyAllWindows()
-

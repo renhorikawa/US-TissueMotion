@@ -4,7 +4,7 @@ import numpy as np
 input_video_path = 'assets/a.mp4'
 output_video_path = 'assets/rotated_a.mp4'
 
-angle = 270
+angle = 360
 
 cap = cv2.VideoCapture(input_video_path)
 
