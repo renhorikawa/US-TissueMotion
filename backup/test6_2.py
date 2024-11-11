@@ -59,7 +59,7 @@ def draw_arrows(frame, flow, roi, mag, ang, color):
                                  y + y_pos + int(flow[y_pos, x_pos, 1])),
                                 color, 1, tipLength=3)
 
-cap, prvs = initialize_video_capture("assets/sample3.mp4")
+cap, prvs = initialize_video_capture("assets/echo_data/3cm_2.mp4")
 
 # 動画の最初のフレームで手動でROIを選択
 ret, frame = cap.read()
