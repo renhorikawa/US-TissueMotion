@@ -62,7 +62,7 @@ def calculate_top_85_percent_movement(mag):
         return 0  # 動きがない場合は0
 
 # 動画を初期化
-cap, prvs = initialize_video_capture("assets/echo_data/1cm.mp4")
+cap, prvs = initialize_video_capture("assets/echo_data/3cm.mp4")
 
 # 動画の最初のフレームで手動でROIを選択
 ret, frame = cap.read()

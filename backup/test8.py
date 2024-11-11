@@ -52,13 +52,16 @@ def draw_arrows(frame, flow, roi, mag, color=(0, 255, 0), scale=10, arrow_length
                 # 矢印を描画
                 cv2.arrowedLine(frame, (x + x_pos, y + y_pos), (end_x, end_y), color, thickness, tipLength=0.05)
 
-def calculate_max_movement(mag):
-    # フレーム内で最大の動きの大きさを返す
-    max_movement = np.max(mag)  # 最大の動き（マグニチュード）
-    return max_movement
+def calculate_median_movement(mag):
+    # 移動したピクセルのマグニチュードの中央値を計算
+    valid_magnitudes = mag[mag > 1]  # 動きがあるピクセルのみ
+    if valid_magnitudes.size > 0:
+        return np.median(valid_magnitudes)  # 中央値を計算
+    else:
+        return 0  # 動きがない場合は0
 
 # 動画を初期化
-cap, prvs = initialize_video_capture("assets/echo_data/1cm.mp4")
+cap, prvs = initialize_video_capture("assets/echo_data/3cm.mp4")
 
 # 動画の最初のフレームで手動でROIを選択
 ret, frame = cap.read()
@@ -72,8 +75,8 @@ cv2.destroyWindow("ROI選択")
 
 frame_count = 0
 
-# 合計の最大移動量を保存する変数
-total_max_movement = 0.0
+# 合計の動きの中央値を保存する変数
+total_median_movement = 0.0
 
 # オプションで処理を適用するフラグ
 apply_hist_eq = False  # ヒストグラム平坦化を適用するか
@@ -98,14 +101,14 @@ while True:
     # 光学フローを計算
     flow, mag_full = calculate_optical_flow(prvs, next, roi)
 
-    # フレームごとに最大移動量を計算
-    max_movement = calculate_max_movement(mag_full)
-    total_max_movement += max_movement  # 最大移動量の合計を更新
+    # フレームごとに動きの中央値を計算
+    median_movement = calculate_median_movement(mag_full)
+    total_median_movement += median_movement  # 中央値の合計を更新
 
     frame_count += 1
 
-    # フレームごとの最大移動量を出力
-    print(f"フレーム{frame_count}: 最大移動量: {max_movement:.2f}")
+    # フレームごとの動きを出力
+    print(f"フレーム{frame_count}: 動きの中央値: {median_movement:.2f}")
 
     # 動きの矢印を描画
     draw_arrows(frame2, flow, roi, mag_full, (0, 255, 0))
@@ -124,8 +127,9 @@ while True:
 
     prvs = next
 
-# 最終的な最大移動量の合計を出力
-print(f"ROIの最大移動量の合計: {total_max_movement:.2f}")
+# 最終的な動きの中央値の合計を出力
+print(f"ROIの動きの中央値の合計: {total_median_movement:.2f}")
 
 cap.release()
 cv2.destroyAllWindows()
+

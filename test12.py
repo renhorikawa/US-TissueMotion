@@ -52,31 +52,31 @@ def draw_arrows(frame, flow, roi, mag, color=(0, 255, 0), scale=10, arrow_length
                 # 矢印を描画
                 cv2.arrowedLine(frame, (x + x_pos, y + y_pos), (end_x, end_y), color, thickness, tipLength=0.05)
 
-def calculate_median_movement(mag):
-    # 移動したピクセルのマグニチュードの中央値を計算
+def calculate_top_95_percent_movement(mag):
+    # フレーム内で上位95%の値を計算
     valid_magnitudes = mag[mag > 1]  # 動きがあるピクセルのみ
     if valid_magnitudes.size > 0:
-        return np.median(valid_magnitudes)  # 中央値を計算
+        top_95_percent = np.percentile(valid_magnitudes, 95)  # 上位95%の値を計算
+        return top_95_percent
     else:
         return 0  # 動きがない場合は0
 
 # 動画を初期化
 cap, prvs = initialize_video_capture("assets/echo_data/1cm.mp4")
 
-# 動画の最初のフレームで手動でROIを選択
+# 動画の最初のフレームを取得
 ret, frame = cap.read()
 if not ret:
     print("動画の読み込みに失敗しました。")
     exit()
 
-# cv2.selectROIで手動でROIを選択
-roi = cv2.selectROI("ROI選択", frame, fromCenter=False, showCrosshair=True)
-cv2.destroyWindow("ROI選択")
+# 固定のROIを設定 (例: x=230, y=230, 幅=100, 高さ=50)
+roi = (230, 360, 100, 50)  # 手動選択を削除して固定値を使用
 
 frame_count = 0
 
-# 合計の動きの中央値を保存する変数
-total_median_movement = 0.0
+# 合計の上位95%の移動量を保存する変数
+total_top_95_percent_movement = 0.0
 
 # オプションで処理を適用するフラグ
 apply_hist_eq = False  # ヒストグラム平坦化を適用するか
@@ -101,14 +101,14 @@ while True:
     # 光学フローを計算
     flow, mag_full = calculate_optical_flow(prvs, next, roi)
 
-    # フレームごとに動きの中央値を計算
-    median_movement = calculate_median_movement(mag_full)
-    total_median_movement += median_movement  # 中央値の合計を更新
+    # フレームごとに上位95%の移動量を計算
+    top_95_percent_movement = calculate_top_95_percent_movement(mag_full)
+    total_top_95_percent_movement += top_95_percent_movement  # 上位95%の移動量の合計を更新
 
     frame_count += 1
 
-    # フレームごとの動きを出力
-    print(f"フレーム{frame_count}: 動きの中央値: {median_movement:.2f}")
+    # フレームごとの上位95%の移動量を出力
+    print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement:.2f}")
 
     # 動きの矢印を描画
     draw_arrows(frame2, flow, roi, mag_full, (0, 255, 0))
@@ -127,9 +127,8 @@ while True:
 
     prvs = next
 
-# 最終的な動きの中央値の合計を出力
-print(f"ROIの動きの中央値の合計: {total_median_movement:.2f}")
+# 最終的な上位95%の移動量の合計を出力
+print(f"ROIの上位95%の移動量の合計: {total_top_95_percent_movement:.2f}")
 
 cap.release()
 cv2.destroyAllWindows()
-
