@@ -36,6 +36,9 @@ def calculate_optical_flow(prvs, next, roi):
     return flow, mag
 
 def draw_arrows(frame, flow, roi, mag, color=(0, 255, 0), scale=10, arrow_length=5, min_magnitude=1):
+    """
+    光学フローの動きを矢印で描画する関数
+    """
     x, y, w, h = roi
     for y_pos in range(0, h, scale):  # 間引き処理で矢印間隔を大きくする
         for x_pos in range(0, w, scale):
@@ -78,6 +81,8 @@ frame_count = 0
 
 # 合計の上位95%の移動距離を保存する変数
 total_top_95_percent_movement = 0.0
+# 輝度値の合計とフレーム数
+total_luminance = 0.0
 
 # 1ピクセルあたりの距離をコード内で設定 (例えば0.0698 cm)
 pixel_to_distance = 0.0698  # 1ピクセルあたりの距離 (cm)
@@ -108,10 +113,17 @@ while True:
 
     total_top_95_percent_movement += top_95_percent_movement_distance  # 上位95%の移動距離の合計を更新
 
+    # ROI内の輝度値の平均を計算
+    x, y, w, h = roi
+    roi_gray = next_gray[y:y+h, x:x+w]
+    luminance = np.mean(roi_gray)  # ROI内の輝度値の平均
+    total_luminance += luminance  # 輝度値を累積
+
     frame_count += 1
 
     # フレームごとの上位95%の移動量を出力（距離単位で表示）
     print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_distance:.2f} cm")
+    print(f"フレーム{frame_count}: ROI内の輝度値の平均: {luminance:.2f}")
 
     # 動きの矢印を描画
     draw_arrows(frame2, flow, roi, mag_full, (0, 255, 0))
@@ -132,6 +144,9 @@ while True:
 
 # 最終的な上位95%の移動距離の合計を出力
 print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} mm")
+# 最終的なROI内の輝度値の平均を出力
+average_luminance = total_luminance / frame_count
+print(f"ROI内の輝度値の平均: {average_luminance:.2f}")
 
 cap.release()
 cv2.destroyAllWindows()

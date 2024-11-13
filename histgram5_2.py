@@ -60,6 +60,9 @@ def plot_histograms(mag, frame, roi, output_file='histograms.png'):
     axs[0].legend(fontsize=12)
     axs[0].grid(True)
 
+    # X軸の上限を6に設定
+    axs[0].set_xlim(0, 6)  # X軸の範囲を 0 から 6 に設定
+
     # 2つ目のグラフ：ROI内の輝度値のヒストグラム（棒グラフ）
     axs[1].bar(np.arange(50), roi_hist.flatten(), color=sns.color_palette()[1], alpha=0.7, label='ROI Luminance Histogram')
     axs[1].set_title("Histogram of ROI Luminance", fontsize=16, weight='bold')  # タイトルのフォントサイズ
@@ -124,4 +127,3 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-
