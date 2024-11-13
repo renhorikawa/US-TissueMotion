@@ -78,7 +78,7 @@ def plot_histograms(mag, frame, roi, output_file='histograms.png'):
     print(f"ヒストグラムが '{output_file}' として保存されました。")
 
 # 動画を初期化
-cap, prvs = initialize_video_capture("assets/echo_data/2_3cm.mp4")
+cap, prvs = initialize_video_capture("assets/echo_data/1_3cm.mp4")
 
 # 動画の最初のフレームで手動でROIを選択
 ret, frame = cap.read()

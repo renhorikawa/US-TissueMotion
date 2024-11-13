@@ -11,13 +11,16 @@ def initialize_video_capture(video_path):
         exit()
     return cap, cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
 
-def histogram_equalization(image):
-    # ヒストグラム平坦化
-    return cv2.equalizeHist(image)
+# CLAHEと平均値フィルタを組み合わせた輝度調整
+def enhance_brightness_and_contrast_with_filter(image, clip_limit=2.0, tile_grid_size=(8, 8), kernel_size=5):
+    # 平均値フィルタ（ノイズ除去）
+    filtered_image = cv2.blur(image, (kernel_size, kernel_size))
 
-def apply_average_filter(image, kernel_size=5):
-    # 平均値フィルタの適用（ノイズ除去）
-    return cv2.blur(image, (kernel_size, kernel_size))
+    # CLAHEでコントラスト制限付き適応ヒストグラム平坦化
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+    enhanced_image = clahe.apply(filtered_image)
+    
+    return enhanced_image
 
 def calculate_optical_flow(prvs, next, roi):
     x, y, w, h = roi
@@ -96,11 +99,8 @@ while True:
     # フレームをグレースケールに変換
     next_gray = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
 
-    # ヒストグラム平坦化を適用
-    next_gray = histogram_equalization(next_gray)
-
-    # 平均値フィルタを適用（ノイズ除去）
-    next_gray = apply_average_filter(next_gray, kernel_size=5)
+    # CLAHE + 平均値フィルタを適用
+    next_gray = enhance_brightness_and_contrast_with_filter(next_gray)
 
     # 光学フローを計算
     flow, mag_full = calculate_optical_flow(prvs, next_gray, roi)
