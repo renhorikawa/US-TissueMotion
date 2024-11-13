@@ -58,14 +58,24 @@ def draw_arrows(frame, flow, roi, mag, color=(0, 255, 0), scale=10, arrow_length
                 # 矢印を描画
                 cv2.arrowedLine(frame, (x + x_pos, y + y_pos), (end_x, end_y), color, thickness, tipLength=0.05)
 
-def calculate_top_95_percent_movement(mag):
-    # フレーム内で上位95%の値を計算
+def calculate_top_95_percent_movement(mag, min_movement_threshold=10):
+    """
+    フレーム内で上位95%の動きの大きさを計算し、
+    もし上位95%に該当する動きが小さすぎてピクセル数が閾値未満の場合はエラーを出力します。
+    """
     valid_magnitudes = mag[mag > 1]  # 動きがあるピクセルのみ
+
+    # 上位95％の動きの大きさを計算
     if valid_magnitudes.size > 0:
         top_95_percent = np.percentile(valid_magnitudes, 95)  # 上位95%の値を計算
+
+        # 上位95%に該当するピクセル数が少なすぎる場合、警告またはエラーを発生
+        if valid_magnitudes.size < min_movement_threshold:
+            raise ValueError(f"警告: 上位95%の動きに該当するピクセル数が少なすぎます ({valid_magnitudes.size}ピクセル)")
+
         return top_95_percent
     else:
-        return 0  # 動きがない場合は0
+        raise ValueError("警告: 動きが全く検出されませんでした。")
 
 # 動画を初期化
 cap, prvs = initialize_video_capture("assets/echo_data/3_3cm.mp4")
@@ -88,6 +98,9 @@ total_top_95_percent_movement = 0.0
 # 1ピクセルあたりの距離をコード内で設定 (例えば0.0698 cm)
 pixel_to_distance = 0.0698  # 1ピクセルあたりの距離 (cm)
 
+# フラグ：エラーが発生したかどうか
+error_occurred = False
+
 # 動画の各フレームに対して処理を行う
 while True:
     ret, frame2 = cap.read()
@@ -103,18 +116,25 @@ while True:
     # 光学フローを計算
     flow, mag_full = calculate_optical_flow(prvs, next_gray, roi)
 
-    # フレームごとに上位95%の移動量を計算（ピクセル単位）
-    top_95_percent_movement_px = calculate_top_95_percent_movement(mag_full)
+    try:
+        # フレームごとに上位95%の移動量を計算（ピクセル単位）
+        top_95_percent_movement_px = calculate_top_95_percent_movement(mag_full)
 
-    # ピクセル単位から実際の距離（cm）に変換
-    top_95_percent_movement_distance = top_95_percent_movement_px * pixel_to_distance
+        # ピクセル単位から実際の距離（cm）に変換
+        top_95_percent_movement_distance = top_95_percent_movement_px * pixel_to_distance
 
-    total_top_95_percent_movement += top_95_percent_movement_distance  # 上位95%の移動距離の合計を更新
+        total_top_95_percent_movement += top_95_percent_movement_distance  # 上位95%の移動距離の合計を更新
 
-    frame_count += 1
+        frame_count += 1
 
-    # フレームごとの上位95%の移動量を出力（距離単位で表示）
-    print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_distance:.2f} cm")
+        # フレームごとの上位95%の移動量を出力（距離単位で表示）
+        print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_distance:.2f} cm")
+
+    except ValueError as e:
+        # エラーが発生した場合（動きが小さい、または検出されない場合）
+        print(f"フレーム{frame_count}: エラー発生 - {e}")
+        error_occurred = True
+        break  # エラーが発生したら処理を終了する
 
     # 動きの矢印を描画
     draw_arrows(frame2, flow, roi, mag_full, (0, 255, 0))
@@ -134,7 +154,11 @@ while True:
     prvs = next_gray
 
 # 最終的な上位95%の移動距離の合計を出力
-print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} mm")
+if not error_occurred:
+    print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} mm")
+else:
+    print("処理が途中でエラーになりました。")
 
 cap.release()
 cv2.destroyAllWindows()
+
