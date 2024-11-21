@@ -4,20 +4,12 @@ import sys
 
 def initialize_video_capture(video_path):
     cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f"動画ファイル '{video_path}' を開けませんでした。")
-        exit()
-    
     ret, frame1 = cap.read()
     if not ret:
-        print("最初のフレームの読み込みに失敗しました。")
+        print("動画の読み込みに失敗しました。")
         cap.release()
         cv2.destroyAllWindows()
         exit()
-    
-    # フレームのチャンネル数を確認
-    print(f"最初のフレームのサイズ: {frame1.shape}, チャンネル数: {frame1.shape[2] if len(frame1.shape) > 2 else 1}")
-    
     return cap, cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
 
 def enhance_brightness_and_contrast_with_filter(image, clip_limit=2.0, tile_grid_size=(8, 8), kernel_size=5):
@@ -48,16 +40,20 @@ def draw_arrows(frame, flow, roi, mag, color=(0, 255, 0), scale=10, arrow_length
                 thickness = 2
                 cv2.arrowedLine(frame, (x + x_pos, y + y_pos), (end_x, end_y), color, thickness, tipLength=0.05)
 
-# 動画ファイルのパスをユーザーに入力してもらう
-video_path = input("動画ファイルのパスを入力してください: ")
+# まず、動画ファイルのパスをユーザーに入力してもらう
+video_path = input("音声なしの動画ファイルのパスを入力してください (例: output_video.mp4): ")
+
+# 1ピクセルあたりの距離を使用するかどうかを確認
+use_pixel_to_distance = input("1ピクセルあたりの距離を使用しますか？ (y/n): ").strip().lower()
+
+if use_pixel_to_distance == 'y':
+    # 使用する場合は入力を促す
+    pixel_to_distance = float(input("1ピクセルあたりの距離 (mm) を入力してください: "))
+else:
+    pixel_to_distance = None
 
 cap, prvs = initialize_video_capture(video_path)
 
-frame_count = 0
-total_top_95_percent_movement = 0.0
-pixel_to_distance = 0.0624
-
-# 最初のフレームを取得してROIを選択
 ret, frame = cap.read()
 if not ret:
     print("動画の読み込みに失敗しました。")
@@ -65,6 +61,9 @@ if not ret:
 
 roi = cv2.selectROI("ROI選択", frame, fromCenter=False, showCrosshair=True)
 cv2.destroyWindow("ROI選択")
+
+frame_count = 0
+total_top_95_percent_movement = 0.0
 
 while True:
     ret, frame2 = cap.read()
@@ -81,10 +80,14 @@ while True:
     if valid_magnitudes.size > 0:
         top_95_percent = np.percentile(valid_magnitudes, 95)
         top_95_percent_movement_px = top_95_percent
-        top_95_percent_movement_distance = top_95_percent_movement_px * pixel_to_distance
-        total_top_95_percent_movement += top_95_percent_movement_distance
+        if pixel_to_distance is not None:
+            top_95_percent_movement_distance = top_95_percent_movement_px * pixel_to_distance
+            total_top_95_percent_movement += top_95_percent_movement_distance
+            print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_distance:.2f} cm")
+        else:
+            print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_px:.2f} ピクセル")
+
         frame_count += 1
-        print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_distance:.2f} cm")
 
     # 動きが検出されなくても処理を続ける
     draw_arrows(frame2, flow, roi, mag_full, (0, 255, 0))
@@ -98,7 +101,10 @@ while True:
 
     prvs = next_gray
 
-print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} mm")
+if pixel_to_distance is not None:
+    print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} cm")
+else:
+    print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} ピクセル")
 
 cap.release()
 cv2.destroyAllWindows()
@@ -108,3 +114,4 @@ print(f"使用しているPythonバージョン: {sys.version}")
 print("使用しているライブラリ:")
 print(f"OpenCV: {cv2.__version__}")
 print(f"NumPy: {np.__version__}")
+
