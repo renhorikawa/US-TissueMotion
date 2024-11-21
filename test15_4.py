@@ -41,7 +41,7 @@ def draw_arrows(frame, flow, roi, mag, color=(0, 255, 0), scale=10, arrow_length
                 cv2.arrowedLine(frame, (x + x_pos, y + y_pos), (end_x, end_y), color, thickness, tipLength=0.05)
 
 # まず、動画ファイルのパスをユーザーに入力してもらう
-video_path = input("音声なしの動画ファイルのパスを入力してください (例: output_video.mp4): ")
+video_path = input("動画ファイルの名前を入力してください (例: video.mp4): ")
 
 # 1ピクセルあたりの距離を使用するかどうかを確認
 use_pixel_to_distance = input("1ピクセルあたりの距離を使用しますか？ (y/n): ").strip().lower()
@@ -85,6 +85,7 @@ while True:
             total_top_95_percent_movement += top_95_percent_movement_distance
             print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_distance:.2f} cm")
         else:
+            total_top_95_percent_movement += top_95_percent_movement_px
             print(f"フレーム{frame_count}: 上位95%の移動量: {top_95_percent_movement_px:.2f} ピクセル")
 
         frame_count += 1
@@ -101,6 +102,7 @@ while True:
 
     prvs = next_gray
 
+# 最終結果
 if pixel_to_distance is not None:
     print(f"ROIの上位95%の移動距離の合計: {total_top_95_percent_movement:.2f} cm")
 else:
@@ -114,4 +116,3 @@ print(f"使用しているPythonバージョン: {sys.version}")
 print("使用しているライブラリ:")
 print(f"OpenCV: {cv2.__version__}")
 print(f"NumPy: {np.__version__}")
-
